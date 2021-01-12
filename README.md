@@ -1,24 +1,63 @@
-# Lumen PHP Framework
+Lumen crud api ticket
+======
 
-[![Build Status](https://travis-ci.org/laravel/lumen-framework.svg)](https://travis-ci.org/laravel/lumen-framework)
-[![Total Downloads](https://poser.pugx.org/laravel/lumen-framework/d/total.svg)](https://packagist.org/packages/laravel/lumen-framework)
-[![Latest Stable Version](https://poser.pugx.org/laravel/lumen-framework/v/stable.svg)](https://packagist.org/packages/laravel/lumen-framework)
-[![License](https://poser.pugx.org/laravel/lumen-framework/license.svg)](https://packagist.org/packages/laravel/lumen-framework)
+NOTE
+----
+Assignment Nipa cloud, by lumen framework in implement project.
+You can import collection postman in project. 
 
-Laravel Lumen is a stunningly fast PHP micro-framework for building web applications with expressive, elegant syntax. We believe development must be an enjoyable, creative experience to be truly fulfilling. Lumen attempts to take the pain out of development by easing common tasks used in the majority of web projects, such as routing, database abstraction, queueing, and caching.
+> 1_Lumen_Nipa_cloud.postman_collection.json
 
-## Official Documentation
+Get Started
+-----------
 
-Documentation for the framework can be found on the [Lumen website](https://lumen.laravel.com/docs).
+#### Requirements
 
-## Contributing
+To run this application on your machine, you need at least:
 
-Thank you for considering contributing to Lumen! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+> docker-compose
 
-## Security Vulnerabilities
+> PHP ^7.2
 
-If you discover a security vulnerability within Lumen, please send an e-mail to Taylor Otwell at taylor@laravel.com. All security vulnerabilities will be promptly addressed.
+> Lumen ^7.0
 
-## License
 
-The Lumen framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Application flow pattern:
+---------------------
+https://github.com/suraboy/lumen-crud-api-ticket
+
+Run the docker for development:
+---------------------
+First you need to copy `.env.local` to `.env` for setup environment of appplication
+
+You can start the application and run the containers in the background, use following command inside project root:
+
+```bash
+docker-compose up -d
+```
+
+Installing Dependencies via Composer
+------------------------------------
+Run the composer installer:
+
+```bash
+docker exec -it lumen-crud-ticket-app composer install
+```
+or
+```bash
+docker exec -it lumen-crud-ticket-app composer update
+```
+
+Database Setup
+------------------------------------
+You need to create database `nipa_db` in `http://localhost:8880` and Run the migration artisan command:
+```bash
+docker exec -it lumen-crud-ticket-app php artisan migrate
+```
+
+Running Application
+------------------------------------
+Open the browser
+```bash
+http://localhost:8000
+```
