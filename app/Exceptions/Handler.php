@@ -142,7 +142,7 @@ class Handler extends ExceptionHandler
             ];
         }
 
-        if (env('APP_DEBUG',false) === 'true') {
+        if (env('APP_DEBUG',true) == true) {
             $response['exception'] = [
                 'code' => $exception->getCode(),
                 'message' => $exception->getMessage(),
