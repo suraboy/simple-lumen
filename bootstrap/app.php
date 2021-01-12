@@ -23,9 +23,9 @@ $app = new Laravel\Lumen\Application(
     dirname(__DIR__)
 );
 
-// $app->withFacades();
+$app->withFacades();
 
-// $app->withEloquent();
+$app->withEloquent();
 
 /*
 |--------------------------------------------------------------------------
@@ -47,6 +47,18 @@ $app->singleton(
     Illuminate\Contracts\Console\Kernel::class,
     App\Console\Kernel::class
 );
+
+$app->singleton('filesystem', function ($app) {
+    return $app->loadComponent(
+        'filesystems',
+        Illuminate\Filesystem\FilesystemServiceProvider::class,
+        'filesystem'
+    );
+});
+
+// load file system configurations
+$app->configure('filesystems');
+
 
 /*
 |--------------------------------------------------------------------------
@@ -91,7 +103,9 @@ $app->configure('app');
 |
 */
 
-// $app->register(App\Providers\AppServiceProvider::class);
+$app->register(App\Providers\AppServiceProvider::class);
+$app->register(App\Providers\FormRequestServiceProvider::class);
+$app->register(App\Providers\HelperServiceProvider::class);
 // $app->register(App\Providers\AuthServiceProvider::class);
 // $app->register(App\Providers\EventServiceProvider::class);
 
@@ -105,11 +119,26 @@ $app->configure('app');
 | can respond to, as well as the controllers that may handle them.
 |
 */
-
-$app->router->group([
-    'namespace' => 'App\Http\Controllers',
-], function ($router) {
-    require __DIR__ . '/../routes/api.php';
+$app->router->get('/', function () {
+    return 'Welcome to lumen crud api ticket';
 });
+
+$versionData = array_diff(scandir(base_path('routes')), array('.', '..'));
+
+# load folder version
+foreach ($versionData as $version) {
+    foreach (scandir(base_path('routes/' . $version . '/')) as $key => $dir) {
+        $file = base_path('routes/' . $version . '/' . $dir) . '/' . $dir . 'Route.php';
+        if (is_dir(base_path('routes/' . $version . '/' . $dir)) && is_file($file)) {
+            $app->router->group([
+                'prefix' => strtolower($version),
+                'namespace' => 'App\Http\Controllers\\' . ucfirst($version),
+            ], function ($router) use ($file) {
+                require $file;
+            });
+        }
+    }
+}
+
 
 return $app;
