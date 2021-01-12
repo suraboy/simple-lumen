@@ -10,11 +10,21 @@ use Prettus\Repository\Events\RepositoryEntityUpdated;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Request;
 
+/**
+ * Class Repository
+ * @package App\Contracts
+ */
 abstract class Repository extends BaseRepository implements CacheableInterface
 {
+    /**
+     * @var int
+     */
     protected $limit =30;
     use CacheableRepository;
 
+    /**
+     * @return mixed
+     */
     public function toSql()
     {
         $this->applyCriteria();
@@ -24,6 +34,12 @@ abstract class Repository extends BaseRepository implements CacheableInterface
     }
 
 
+    /**
+     * @param array $attributes
+     * @param $id
+     * @return mixed
+     * @throws \Prettus\Repository\Exceptions\RepositoryException
+     */
     public function update(array $attributes, $id)
     {
         $this->applyScope();
@@ -43,6 +59,11 @@ abstract class Repository extends BaseRepository implements CacheableInterface
         return $this->parserResult($model);
     }
 
+    /**
+     * @param $id
+     * @return int
+     * @throws \Prettus\Repository\Exceptions\RepositoryException
+     */
     public function delete($id)
     {
         $this->applyScope();
@@ -63,6 +84,11 @@ abstract class Repository extends BaseRepository implements CacheableInterface
         return $deleted;
     }
 
+    /**
+     * @param $id
+     * @param $relation
+     * @return mixed
+     */
     public function deleteAndDetach($id, $relation)
     {
         $deleted = DB::transaction(function () use ($id, $relation) {
@@ -91,6 +117,11 @@ abstract class Repository extends BaseRepository implements CacheableInterface
         return $deleted;
     }
 
+    /**
+     * @param $id
+     * @param $relations
+     * @return mixed
+     */
     public function deleteAndDetaches($id, $relations)
     {
         $deleted = DB::transaction(function () use ($id, $relations) {
@@ -121,22 +152,12 @@ abstract class Repository extends BaseRepository implements CacheableInterface
         return $deleted;
     }
 
-
     /**
      * @param null $limit
      * @param array $columns
      * @param string $method
      * @return mixed
      */
-    public function findByFieldWithLocale($table, $locale = 'en', $field, $value)
-    {
-        $model = DB::table($table)
-            ->whereRaw("JSON_EXTRACT(" . $field . ", '$." . $locale . "') = ?", $value)
-            ->get();
-
-        return $model;
-    }
-
     public function paginate($limit = null, $columns = ['*'], $method = "paginate")
     {
         $limit = Request::get('limit') ?? $this->limit;

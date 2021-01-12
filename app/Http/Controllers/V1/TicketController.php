@@ -10,6 +10,7 @@ use App\Http\Requests\Tickets\UpdateTicketsRequest;
 use App\Http\Requests\Tickets\DeleteTicketsRequest;
 use App\Repositories\Tickets\TicketsRepository;
 use App\Transformers\TicketsTransformer;
+use App\Criterias\DateRangeCriteria;
 
 /**
  * Class TicketController
@@ -45,6 +46,11 @@ class TicketController extends Controller
      */
     public function index(IndexTicketsRequest $request)
     {
+        if ($request->created_start_at && $request->created_end_at) {
+            #create start date & create end date
+            $this->ticketsRepository->pushCriteria(new DateRangeCriteria($request->created_start_at, $request->created_end_at));
+        }
+
         $model = $this->ticketsRepository->paginate();
 
         return $this->respondWithCollection($model, $this->ticketsTransformer);

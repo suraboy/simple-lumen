@@ -6,6 +6,7 @@ ENV PHP_DISPLAY_ERRORS=Off
 ENV PHP_POST_MAX_SIZE=8M
 ENV PHP_UPLOAD_MAX_FILESIZE=2M
 ENV PHP_MAX_FILE_UPLOADS=20
+ENV XDEBUG_MODE=coverage
 
 # Add the PHP configuration file
 COPY ./php.ini /usr/local/etc/php/
@@ -42,6 +43,9 @@ RUN apt-get update -yqq \
         libmcrypt-dev \
     && rm -r /var/lib/apt/lists/*
 
+RUN pecl install xdebug \
+        pcov
+RUN docker-php-ext-enable xdebug
 # Install composer
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
