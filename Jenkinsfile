@@ -1,42 +1,105 @@
+def GITHUB_REPO = 'git@github.com:suraboy/lumen-crud-api-ticket.git'
+def workspace = env.local
+
 pipeline {
-    agent {
-        docker {
-            image 'php:7.0'
-            args '-u root:sudo'
-        }
-    }
+    agent any
     stages {
-        stage('Initialize'){
-                def dockerHome = tool 'Set up docker'
-                env.PATH = "${dockerHome}/bin:${env.PATH}"
-        }
+        stage('Testing Application') {
+            failFast true
+            parallel {
 
-        stage('Build') {
-            steps {
-                /**
-                 * Install packages
-                 */
-                sh '''apt-get update -q
-                apt-get install git -y
-                apt-get autoremove graphviz -y
-                apt-get install graphviz -y
-                '''
+                stage('Initialize Database') {
+                    steps {
+                        sh 'docker-compose -f /opt/mariadb/docker-compose.yml up -d'
+                        sh "echo '>> Starting Container MariaDB... DONE !'"
+                        sh '''
+                            docker inspect jenkins_mariadb | grep "IP"
+                            "echo '>> Checking for MariaDB services... DONE !'"
+                        '''
+                    }
+                }
 
-                /**
-                 * Install composer
-                 */
-                sh '''
-                    echo $USER
-                    php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
-                    php -r "if (hash_file('SHA384', 'composer-setup.php') === '544e09ee996cdf60ece3804abc52599c22b1f40f4323403c44d44fdfdd586475ca9813a858088ffbc1f233e9b180f061') { echo 'Installer verified'; } else { echo 'Installer corrupt'; unlink('composer-setup.php'); } echo PHP_EOL;"
-                    php composer-setup.php
-                    php -r "unlink('composer-setup.php');"
-                    php composer.phar self-update
-                    php composer.phar install --no-interaction
-                    ls -la
-                    vendor/bin/phpunit
-                '''
+                stage('Unit Test') {
+                    agent {
+                        docker {
+                            image 'edbizarro/gitlab-ci-pipeline-php:7.4-alpine'
+                            args '-u root -v /var/run/docker.sock:/var/run/docker.sock'
+                        }
+                    }
+
+                    steps {
+                        checkout([$class: 'GitSCM', branches: [[name: '*/dev-staging']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[credentialsId: 'MYAPP_SSH_PRIVATE_KEY', url: GITHUB_REPO]]])
+                        sh "echo '>> Checkout Repository... DONE !'"
+
+                        sh '''
+                            cd "${workspace}"
+                            cp ./src/.env.pipeline.jenkins ./src/.env
+                            make fixing-cache
+                            make composer-install-cicd
+                            make key-generate
+                            make composer-dumpautoload
+                            make run-migrate-all
+                            make clear-all
+                        '''
+                    }
+                }
+
             }
         }
+
+        stage('Deploy Staging') {
+            when {
+                anyOf {
+                    branch 'dev-staging'
+                    environment name: 'DEPLOY_TO', value: 'staging'
+                }
+            }
+            agent {
+                docker {
+                    image 'ruby:2.7.1-slim-buster'
+                    args '-u root -v /var/run/docker.sock:/var/run/docker.sock'
+                }
+            }
+            environment {
+                MYAPP_SSH_PRIVATE_KEY = credentials('MYAPP_SSH_PRIVATE_KEY')
+                MYAPP_SSH_PEM_KEY = credentials('MYAPP_SSH_PEM_KEY')
+                MYAPP_KNOWN_HOSTS = credentials('MYAPP_KNOWN_HOSTS')
+            }
+            steps {
+                withCredentials(bindings: [sshUserPrivateKey(credentialsId: 'MYAPP_SSH_PRIVATE_KEY', \
+                                                             keyFileVariable: 'MYAPP_SSH_PRIVATE_KEY')]) {
+                    sh '''
+                        #################
+                        ### SETUP SSH ###
+                        #################
+                        apt-get update -qq
+                        apt-get install -qq git build-essential
+                        apt-get install -qq openssh-client
+                        mkdir -p ~/.ssh
+                        echo "${MYAPP_SSH_PRIVATE_KEY}" | tr -d '\r' > ~/.ssh/id_rsa
+                        echo "${MYAPP_KNOWN_HOSTS}" | tr -d '\r' > ~/.ssh/known_hosts
+                        chmod 700 ~/.ssh/id_rsa
+                        eval "$(ssh-agent -s)"
+                        ssh-add ~/.ssh/id_rsa
+                        ssh-keyscan -H 'gitlab.com' >> ~/.ssh/known_hosts
+                        chmod 644 ~/.ssh/known_hosts
+                        #######################
+                        ### INSTALL LIBRARY ###
+                        #######################
+                        cd "${workspace}"
+                        cp "${MYAPP_SSH_PEM_KEY}" > keys/myapp.pem
+                        chmod 400 keys/MYAPP.pem
+                        gem install bundler
+                        bundle install
+                        echo "--- ---"
+                        make deploy-staging
+                    '''
+                }
+            }
+        }
+    }
+    options {
+        // Only keep the 10 most recent builds
+        buildDiscarder(logRotator(numToKeepStr:'10'))
     }
 }
